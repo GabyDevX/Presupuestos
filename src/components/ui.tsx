@@ -98,10 +98,3 @@ export function Dinero({ n, className = "" }: { n: number; className?: string })
 }
 
 export const confirmar = (mensaje: string) => window.confirm(mensaje);
-
-// Mueve el elemento `i` una posición (-1 arriba, +1 abajo).
-export function mover<T>(arr: T[], i: number, dir: -1 | 1) {
-  const j = i + dir;
-  if (j < 0 || j >= arr.length) return;
-  [arr[i], arr[j]] = [arr[j], arr[i]];
-}

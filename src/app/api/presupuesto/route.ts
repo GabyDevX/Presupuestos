@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { estaAutenticado } from "@/lib/auth";
-import { crearSeed, esPresupuestoValido } from "@/lib/seed";
+import { crearSeed } from "@/lib/seed";
+import { esPresupuestoValido } from "@/lib/validar";
+import { resolverGuardado } from "@/lib/versiones";
 import { guardar, leer } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -28,12 +30,11 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Formato inválido" }, { status: 400 });
   }
 
-  // Control de versión: si la otra persona guardó antes, no pisamos sus cambios.
-  const actual = (await leer()) ?? crearSeed();
-  if (nuevo.rev !== actual.rev) {
-    return NextResponse.json({ error: "Conflicto", data: actual }, { status: 409 });
+  // Si la otra persona guardó antes, no pisamos sus cambios.
+  const resultado = resolverGuardado((await leer()) ?? crearSeed(), nuevo);
+  if (!resultado.ok) {
+    return NextResponse.json({ error: "Conflicto", data: resultado.actual }, { status: 409 });
   }
-  const guardado = { ...nuevo, rev: actual.rev + 1 };
-  await guardar(guardado);
-  return NextResponse.json({ rev: guardado.rev });
+  await guardar(resultado.guardado);
+  return NextResponse.json({ rev: resultado.guardado.rev });
 }

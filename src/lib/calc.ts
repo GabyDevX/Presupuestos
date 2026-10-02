@@ -1,42 +1,91 @@
-import type { Destino, Item, Presupuesto, Seccion } from "./types";
+import type { Destino, Ingreso, Item, Persona, Presupuesto, Seccion } from "./types";
 
-const suma = (items: Item[]) => items.reduce((t, i) => t + (i.monto || 0), 0);
+/** Redondea a centavos para que sumas como 0,1 + 0,2 no dejen restos de punto flotante. */
+export const redondear = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+const num = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? n : 0);
+
+const suma = (items: Item[]) => redondear(items.reduce((t, i) => t + num(i.monto), 0));
 const sumaPagada = (items: Item[]) =>
-  items.reduce((t, i) => t + (i.pagado ? i.monto || 0 : 0), 0);
+  redondear(items.reduce((t, i) => t + (i.pagado ? num(i.monto) : 0), 0));
 
 export const totalDestino = (d: Destino) =>
-  (d.transporte || 0) + (d.estadia || 0) + (d.comidas || 0) + (d.otros || 0);
+  redondear(num(d.transporte) + num(d.estadia) + num(d.comidas) + num(d.otros));
 
 export const totalDestinosElegidos = (destinos: Destino[]) =>
-  destinos.filter((d) => d.seleccionado).reduce((t, d) => t + totalDestino(d), 0);
+  redondear(destinos.filter((d) => d.seleccionado).reduce((t, d) => t + totalDestino(d), 0));
 
-export function totalesSeccion(s: Seccion, destinos: Destino[]) {
+/**
+ * Totales de una sección. Las subsecciones marcadas como omitidas no cuentan.
+ * Los destinos elegidos se suman (como pendientes) solo si `contarDestinos` es true;
+ * por defecto, en las secciones de tipo vacaciones.
+ */
+export function totalesSeccion(
+  s: Seccion,
+  destinos: Destino[],
+  contarDestinos: boolean = s.tipo === "vacaciones",
+) {
   const itemsActivos = [
     ...s.items,
     ...s.subsecciones.filter((x) => !x.omitida).flatMap((x) => x.items),
   ];
-  let planificado = suma(itemsActivos);
   const pagado = sumaPagada(itemsActivos);
-  if (s.tipo === "vacaciones") planificado += totalDestinosElegidos(destinos);
-  return { planificado, pagado, pendiente: planificado - pagado };
+  const planificado = redondear(
+    suma(itemsActivos) + (contarDestinos ? totalDestinosElegidos(destinos) : 0),
+  );
+  return { planificado, pagado, pendiente: redondear(planificado - pagado) };
 }
 
 export function totales(p: Presupuesto) {
-  const ingresos = p.ingresos.reduce((t, i) => t + (i.monto || 0), 0);
+  const ingresos = redondear(p.ingresos.reduce((t, i) => t + num(i.monto), 0));
   let planificado = 0;
   let pagado = 0;
+  // Los destinos se suman una sola vez, en la primera sección de vacaciones.
+  let destinosContados = false;
   for (const s of p.secciones) {
-    const t = totalesSeccion(s, p.destinos);
+    const cuenta = s.tipo === "vacaciones" && !destinosContados;
+    if (cuenta) destinosContados = true;
+    const t = totalesSeccion(s, p.destinos, cuenta);
     planificado += t.planificado;
     pagado += t.pagado;
   }
+  planificado = redondear(planificado);
+  pagado = redondear(pagado);
+  const balance = redondear(ingresos - planificado);
   return {
     ingresos,
     planificado,
     pagado,
-    pendiente: planificado - pagado,
-    balance: ingresos - planificado,
+    pendiente: redondear(planificado - pagado),
+    balance,
+    /** Balance como si no hubiera ningún destino elegido: base para comparar escenarios. */
+    balanceSinDestinos: redondear(
+      balance + (destinosContados ? totalDestinosElegidos(p.destinos) : 0),
+    ),
   };
+}
+
+/** Balance si el único destino elegido fuera `d`. */
+export const balanceSoloDestino = (balanceSinDestinos: number, d: Destino) =>
+  redondear(balanceSinDestinos - totalDestino(d));
+
+export const totalPorPersona = (ingresos: Ingreso[], persona: Persona) =>
+  redondear(ingresos.filter((i) => i.persona === persona).reduce((t, i) => t + num(i.monto), 0));
+
+/** Ingresos ordenados por fecha (los que no tienen fecha, al final) con el acumulado. */
+export function cronograma(ingresos: Ingreso[]) {
+  const orden = ingresos
+    .map((ingreso, pos) => ({ ingreso, pos }))
+    .sort((a, b) => {
+      const fa = a.ingreso.fecha || "9999-99-99";
+      const fb = b.ingreso.fecha || "9999-99-99";
+      return fa.localeCompare(fb) || a.pos - b.pos;
+    });
+  let acumulado = 0;
+  return orden.map(({ ingreso }) => {
+    acumulado = redondear(acumulado + num(ingreso.monto));
+    return { ingreso, acumulado };
+  });
 }
 
 export const formatoMoneda = (n: number) =>

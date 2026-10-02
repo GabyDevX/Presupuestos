@@ -16,6 +16,19 @@ Abrí http://localhost:3000. Sin las variables de Upstash, los datos se guardan 
 
 Para guardar de verdad en local, completá `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` en `.env.local`.
 
+## Tests
+
+```bash
+npm test          # corre todo una vez
+npm run test:watch
+```
+
+Cubren los cálculos (totales, pagado/pendiente, balance, redondeo, escenarios de vacaciones y "nos quedamos en casa"), la validación del documento, el control de versiones entre dos personas, la autenticación, la API y la interfaz (marcar pagado, editar montos, comparador de destinos, borrar ejemplos, guardado automático y conflictos).
+
+## Celular y computadora
+
+El mismo sitio sirve para ambos: en pantallas grandes el resumen y los ingresos quedan fijos a la izquierda y los gastos a la derecha. También se puede instalar como app (menú del navegador → "Instalar" / "Agregar a pantalla de inicio").
+
 ## Desplegarlo en Vercel
 
 1. Importá el repositorio en Vercel (New Project → `presupuestos`).

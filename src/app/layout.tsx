@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Presupuesto de fin de año",
   description: "Presupuesto compartido de fin de año y enero",
   robots: { index: false, follow: false },
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
 };
 
 export const viewport: Viewport = {

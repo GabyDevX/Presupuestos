@@ -5,7 +5,8 @@ import { nuevoId, totalesSeccion } from "@/lib/calc";
 import type { Destino, Item, Seccion } from "@/lib/types";
 import Destinos from "./Destinos";
 import ItemsLista from "./ItemsLista";
-import { BotonAgregar, BotonIcono, Dinero, TextoInput, confirmar, mover } from "./ui";
+import { mover } from "@/lib/acciones";
+import { BotonAgregar, BotonIcono, Dinero, TextoInput, confirmar } from "./ui";
 
 export default function SeccionCard({
   seccion: s,

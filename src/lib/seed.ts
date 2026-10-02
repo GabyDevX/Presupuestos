@@ -67,14 +67,3 @@ export function crearSeed(): Presupuesto {
     ],
   };
 }
-
-export function esPresupuestoValido(x: unknown): x is Presupuesto {
-  if (!x || typeof x !== "object") return false;
-  const p = x as Record<string, unknown>;
-  return (
-    typeof p.rev === "number" &&
-    Array.isArray(p.ingresos) &&
-    Array.isArray(p.secciones) &&
-    Array.isArray(p.destinos)
-  );
-}

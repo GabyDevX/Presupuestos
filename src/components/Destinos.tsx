@@ -1,6 +1,6 @@
 "use client";
 
-import { nuevoId, totalDestino } from "@/lib/calc";
+import { balanceSoloDestino, nuevoId, totalDestino } from "@/lib/calc";
 import type { Destino } from "@/lib/types";
 import { BotonAgregar, BotonIcono, Dinero, MontoInput, TextoInput, confirmar } from "./ui";
 
@@ -40,7 +40,7 @@ export default function Destinos({
       <div className="mt-2 space-y-3">
         {destinos.map((d, idx) => {
           const total = totalDestino(d);
-          const balanceSolo = balanceBase - total;
+          const balanceSolo = balanceSoloDestino(balanceBase, d);
           return (
             <div
               key={d.id}

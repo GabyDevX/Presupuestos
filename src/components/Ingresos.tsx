@@ -1,6 +1,6 @@
 "use client";
 
-import { nuevoId } from "@/lib/calc";
+import { cronograma, nuevoId, redondear, totalPorPersona } from "@/lib/calc";
 import type { Ingreso, Persona } from "@/lib/types";
 import { BotonAgregar, BotonIcono, Dinero, MontoInput, TextoInput, confirmar } from "./ui";
 
@@ -13,10 +13,8 @@ export default function Ingresos({
   ingresos: Ingreso[];
   mutar: (fn: (l: Ingreso[]) => void) => void;
 }) {
-  const orden = [...ingresos].sort((a, b) => (a.fecha || "9").localeCompare(b.fecha || "9"));
-  const porPersona = (p: Persona) =>
-    ingresos.filter((i) => i.persona === p).reduce((t, i) => t + (i.monto || 0), 0);
-  let acumulado = 0;
+  const orden = cronograma(ingresos);
+  const porPersona = (p: Persona) => totalPorPersona(ingresos, p);
 
   return (
     <section className="rounded-2xl bg-white p-4 shadow-sm">
@@ -30,8 +28,7 @@ export default function Ingresos({
       )}
 
       <ul className="mt-2 space-y-3">
-        {orden.map((ing) => {
-          acumulado += ing.monto || 0;
+        {orden.map(({ ingreso: ing, acumulado }) => {
           const upd = (fn: (i: Ingreso) => void) =>
             mutar((l) => fn(l.find((x) => x.id === ing.id)!));
           return (
@@ -109,7 +106,7 @@ export default function Ingresos({
         </div>
         <div className="rounded-xl bg-emerald-50 p-2">
           <div className="text-emerald-700">Total</div>
-          <Dinero n={porPersona("yo") + porPersona("esposa")} className="font-bold text-emerald-800" />
+          <Dinero n={redondear(porPersona("yo") + porPersona("esposa"))} className="font-bold text-emerald-800" />
         </div>
       </div>
     </section>
