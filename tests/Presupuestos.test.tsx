@@ -319,9 +319,9 @@ describe("ingresos", () => {
     expect(valor("Ingresos")).toBe("$ 2.500");
     expect(balance().monto).toBe("$ 2.500");
   });
-  it("cambiar la persona mueve el monto entre 'Yo' y 'Esposa'", async () => {
+  it("cambiar la persona mueve el monto entre Gabriel y Camila", async () => {
     const user = montar(presupuesto({ ingresos: [ingreso(300, { nombre: "Aguinaldo" })] }));
-    const resumenPersonas = () => norm(screen.getByText("Esposa", { selector: "div" }).parentElement!.textContent);
+    const resumenPersonas = () => norm(screen.getByText("Camila", { selector: "div" }).parentElement!.textContent);
     expect(resumenPersonas()).toContain("$ 0");
     await user.selectOptions(screen.getByLabelText("Persona"), "esposa");
     expect(resumenPersonas()).toContain("$ 300");

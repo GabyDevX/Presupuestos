@@ -1,7 +1,7 @@
 "use client";
 
 import { cronograma, nuevoId, redondear, totalPorPersona } from "@/lib/calc";
-import type { Ingreso, Persona } from "@/lib/types";
+import { NOMBRES_PERSONA, type Ingreso, type Persona } from "@/lib/types";
 import { BotonAgregar, BotonIcono, Dinero, MontoInput, TextoInput, confirmar } from "./ui";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -58,8 +58,8 @@ export default function Ingresos({
                   className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-base"
                   aria-label="Persona"
                 >
-                  <option value="yo">Yo</option>
-                  <option value="esposa">Esposa</option>
+                  <option value="yo">{NOMBRES_PERSONA.yo}</option>
+                  <option value="esposa">{NOMBRES_PERSONA.esposa}</option>
                 </select>
                 <input
                   type="date"
@@ -97,11 +97,11 @@ export default function Ingresos({
 
       <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
         <div className="rounded-xl bg-slate-50 p-2">
-          <div className="text-slate-500">Yo</div>
+          <div className="text-slate-500">{NOMBRES_PERSONA.yo}</div>
           <Dinero n={porPersona("yo")} className="font-semibold" />
         </div>
         <div className="rounded-xl bg-slate-50 p-2">
-          <div className="text-slate-500">Esposa</div>
+          <div className="text-slate-500">{NOMBRES_PERSONA.esposa}</div>
           <Dinero n={porPersona("esposa")} className="font-semibold" />
         </div>
         <div className="rounded-xl bg-emerald-50 p-2">

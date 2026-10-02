@@ -15,6 +15,7 @@ const esItem = (x: unknown) =>
   esTexto(x.nombre) &&
   esMonto(x.monto) &&
   esBool(x.pagado) &&
+  opcional(x.manual, esBool) &&
   opcional(x.fijo, esBool) &&
   opcional(x.ejemplo, esBool);
 
@@ -23,6 +24,8 @@ const esSubseccion = (x: unknown) =>
   esTexto(x.id) &&
   esTexto(x.nombre) &&
   lista(x.items, esItem) &&
+  opcional(x.montoBase, esMonto) &&
+  opcional(x.etiquetaItem, esTexto) &&
   opcional(x.omitirTexto, esTexto) &&
   opcional(x.omitida, esBool);
 
@@ -31,6 +34,7 @@ const esSeccion = (x: unknown) =>
   esTexto(x.id) &&
   esTexto(x.nombre) &&
   esTexto(x.emoji) &&
+  opcional(x.nota, esTexto) &&
   opcional(x.tipo, (t) => t === "vacaciones") &&
   lista(x.items, esItem) &&
   lista(x.subsecciones, esSubseccion);

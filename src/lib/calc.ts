@@ -1,13 +1,22 @@
-import type { Destino, Ingreso, Item, Persona, Presupuesto, Seccion } from "./types";
+import type { Destino, Ingreso, Item, Persona, Presupuesto, Seccion, Subseccion } from "./types";
 
 /** Redondea a centavos para que sumas como 0,1 + 0,2 no dejen restos de punto flotante. */
 export const redondear = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 const num = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? n : 0);
 
-const suma = (items: Item[]) => redondear(items.reduce((t, i) => t + num(i.monto), 0));
-const sumaPagada = (items: Item[]) =>
-  redondear(items.reduce((t, i) => t + (i.pagado ? num(i.monto) : 0), 0));
+/** Monto vigente de un ítem: el general de su lista, salvo que se haya editado a mano. */
+export const montoItem = (i: Item, sub?: Pick<Subseccion, "montoBase">) =>
+  sub?.montoBase !== undefined && !i.manual ? num(sub.montoBase) : num(i.monto);
+
+type Linea = { monto: number; pagado: boolean };
+const lineas = (items: Item[], sub?: Subseccion): Linea[] =>
+  items.map((i) => ({ monto: montoItem(i, sub), pagado: i.pagado }));
+const suma = (ls: Linea[]) => redondear(ls.reduce((t, l) => t + l.monto, 0));
+const sumaPagada = (ls: Linea[]) =>
+  redondear(ls.reduce((t, l) => t + (l.pagado ? l.monto : 0), 0));
+
+export const totalSubseccion = (sub: Subseccion) => suma(lineas(sub.items, sub));
 
 export const totalDestino = (d: Destino) =>
   redondear(num(d.transporte) + num(d.estadia) + num(d.comidas) + num(d.otros));
@@ -26,8 +35,8 @@ export function totalesSeccion(
   contarDestinos: boolean = s.tipo === "vacaciones",
 ) {
   const itemsActivos = [
-    ...s.items,
-    ...s.subsecciones.filter((x) => !x.omitida).flatMap((x) => x.items),
+    ...lineas(s.items),
+    ...s.subsecciones.filter((x) => !x.omitida).flatMap((x) => lineas(x.items, x)),
   ];
   const pagado = sumaPagada(itemsActivos);
   const planificado = redondear(

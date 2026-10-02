@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { borrarEjemplos, hayEjemplos, mover } from "@/lib/acciones";
 import { totales } from "@/lib/calc";
-import { crearSeed } from "@/lib/seed";
+import { crearEjemplo as crearSeed } from "./ejemplo";
 import { esPresupuestoValido } from "@/lib/validar";
 import { resolverGuardado } from "@/lib/versiones";
 import { item, presupuesto, seccion } from "./helpers";

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { nuevoId, totalesSeccion } from "@/lib/calc";
+import { nuevoId, totalesSeccion, totalSubseccion } from "@/lib/calc";
 import type { Destino, Item, Seccion } from "@/lib/types";
 import Destinos from "./Destinos";
 import ItemsLista from "./ItemsLista";
 import { mover } from "@/lib/acciones";
-import { BotonAgregar, BotonIcono, Dinero, TextoInput, confirmar } from "./ui";
+import { BotonAgregar, BotonIcono, Dinero, MontoInput, TextoInput, confirmar } from "./ui";
 
 export default function SeccionCard({
   seccion: s,
@@ -97,10 +97,49 @@ export default function SeccionCard({
                     {sub.omitirTexto}
                   </label>
                 )}
-                <ItemsLista items={sub.items} mutar={mutarSub} deshabilitada={sub.omitida} />
+                {sub.montoBase !== undefined && (
+                  <label className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-sm">
+                    <span>
+                      <span className="font-medium">Presupuesto general por {sub.etiquetaItem ?? "ítem"}</span>
+                      <span className="block text-xs text-slate-500">
+                        Se aplica a todos; editá un monto para cambiar solo ese.
+                      </span>
+                    </span>
+                    <MontoInput
+                      valor={sub.montoBase}
+                      onChange={(n) => mutarSeccion((x) => (x.subsecciones[si].montoBase = n))}
+                      className="w-28 shrink-0"
+                      etiqueta={`Presupuesto general de ${sub.nombre}`}
+                    />
+                  </label>
+                )}
+                <ItemsLista
+                  items={sub.items}
+                  mutar={mutarSub}
+                  deshabilitada={sub.omitida}
+                  montoBase={sub.montoBase}
+                  etiquetaAgregar={sub.etiquetaItem}
+                />
+                {sub.items.length > 0 && (
+                  <p className="mt-2 text-right text-xs text-slate-500">
+                    {sub.items.length} {sub.items.length === 1 ? "ítem" : "ítems"} · Subtotal{" "}
+                    <Dinero n={totalSubseccion(sub)} className="font-semibold text-slate-700" />
+                  </p>
+                )}
               </div>
             );
           })}
+
+          {s.nota !== undefined && (
+            <textarea
+              value={s.nota}
+              onChange={(e) => mutarSeccion((x) => (x.nota = e.target.value))}
+              placeholder="Notas de la sección…"
+              aria-label={`Notas de ${s.nombre}`}
+              rows={2}
+              className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+            />
+          )}
 
           {s.tipo === "vacaciones" && (
             <Destinos destinos={destinos} balanceBase={balanceBase} mutar={mutarDestinos} />

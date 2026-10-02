@@ -1,4 +1,4 @@
-import { crearSeed } from "@/lib/seed";
+import { crearEjemplo } from "./ejemplo";
 import type { Destino, Ingreso, Item, Presupuesto, Seccion } from "@/lib/types";
 
 let n = 0;
@@ -28,4 +28,4 @@ export const presupuesto = (extra: Partial<Presupuesto> = {}): Presupuesto => ({
   rev: 0, ingresos: [], secciones: [], destinos: [], ...extra,
 });
 
-export const seed = () => crearSeed();
+export const seed = () => crearEjemplo();

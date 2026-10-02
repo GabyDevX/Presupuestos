@@ -9,7 +9,7 @@ import { COOKIE, estaAutenticado, passwordCorrecta, valorCookie } from "@/lib/au
 import { POST as login } from "@/app/api/login/route";
 import { POST as logout } from "@/app/api/logout/route";
 import { GET, PUT } from "@/app/api/presupuesto/route";
-import { crearSeed } from "@/lib/seed";
+import { crearEjemplo as crearSeed } from "./ejemplo";
 import { presupuesto } from "./helpers";
 
 const json = (body: unknown) =>

@@ -33,14 +33,15 @@ El mismo sitio sirve para ambos: en pantallas grandes el resumen y los ingresos 
 
 1. Importá el repositorio en Vercel (New Project → `presupuestos`).
 2. En **Storage** (o Marketplace) agregá **Upstash Redis** y conectalo al proyecto. Vercel completa solo las variables de entorno.
-3. En **Settings → Environment Variables** creá `APP_PASSWORD` con la contraseña compartida (Production, Preview y Development).
+3. En **Settings → Environment Variables** creá `APP_PASSWORD` con la contraseña compartida (Production, Preview y Development). No se guarda en el repositorio.
 4. Hacé un redeploy. Cada push a `main` despliega automáticamente.
 
 Si cambiás `APP_PASSWORD`, las sesiones abiertas se cierran y hay que volver a entrar.
 
 ## Cómo funciona
 
-- **Datos de ejemplo:** la primera vez aparecen ítems ficticios marcados con "(ejemplo)". El botón **Borrar ejemplos** los elimina y deja la estructura intacta.
+- **Datos iniciales:** la primera vez se carga el presupuesto real (aguinaldos, salarios vacacionales, patente, seguro, lista de regalos y cumpleaños) con los montos pendientes en 0. Está en `src/lib/seed.ts` y solo se usa mientras no haya nada guardado.
+- **Lista de regalos:** tiene un presupuesto general por persona; al editar el monto de alguien (cuando encuentran su regalo) ese queda fijo, y el botón ↺ lo devuelve al general.
 - **Cambios de a dos:** cada guardado lleva un número de versión. Si la otra persona guardó primero, se carga su versión y se avisa. La app también se actualiza sola al volver a abrirla y cada 30 segundos.
 - **Seguro de la casa:** se cuenta en el presupuesto actual aunque se pague en febrero.
 - **Vacaciones:** las opciones de destino que marques se suman a los gastos; cada una muestra el balance si fuera la única elegida.
