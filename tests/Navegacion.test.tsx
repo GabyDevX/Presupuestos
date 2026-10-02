@@ -25,16 +25,19 @@ const irA = (user: ReturnType<typeof userEvent.setup>, tab: string) =>
   user.click(screen.getAllByRole("button", { name: tab })[0]);
 
 describe("navegación entre pantallas", () => {
-  it("abre en Resumen", () => {
+  it("abre en Resumen, con el nombre del presupuesto como título", () => {
     montar();
-    expect(titulo()).toBe("Resumen");
+    expect(titulo()).toBe("Fin de año 2026");
+    expect(screen.getAllByRole("button", { name: "Resumen" })[0]).toHaveAttribute("aria-current", "page");
   });
   it("las cuatro pestañas están en la barra, y se puede ir a cada una", async () => {
     const user = montar();
-    for (const tab of ["Gastos", "Ingresos", "Ajustes", "Resumen"]) {
+    for (const tab of ["Gastos", "Ingresos", "Ajustes"]) {
       await irA(user, tab);
       expect(titulo()).toBe(tab);
     }
+    await irA(user, "Resumen");
+    expect(titulo()).toBe("Fin de año 2026");
   });
   it("hay como máximo 5 destinos principales (barra inferior)", () => {
     montar();
@@ -81,7 +84,7 @@ describe("navegación entre pantallas", () => {
     expect(titulo()).toBe("Ingresos");
     window.history.replaceState(null, "", "/#/");
     await act(async () => window.dispatchEvent(new PopStateEvent("popstate")));
-    expect(titulo()).toBe("Resumen");
+    expect(titulo()).toBe("Fin de año 2026");
   });
   it("en el detalle, la pestaña Gastos sigue activa", async () => {
     const user = montar();

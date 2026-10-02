@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatoFecha } from "@/lib/fechas";
-import { parseRuta, rutaAHash, TABS } from "@/lib/ruta";
+import { hashPresupuesto, parseRuta, presupuestoDeHash, rutaAHash, TABS } from "@/lib/ruta";
 import { esTema, usaOscuro } from "@/lib/tema";
 
 describe("rutas", () => {
@@ -30,6 +30,37 @@ describe("rutas", () => {
   });
   it("acepta el hash sin barra inicial", () => {
     expect(parseRuta("#ajustes")).toEqual({ tab: "ajustes" });
+  });
+});
+
+describe("rutas con presupuesto (base)", () => {
+  const base = "#/p/abc123";
+  it("Resumen de un presupuesto es solo la base", () => {
+    expect(rutaAHash({ tab: "resumen" }, base)).toBe(base);
+    expect(parseRuta(base, base)).toEqual({ tab: "resumen" });
+  });
+  it("las pestañas y secciones van después de la base", () => {
+    expect(rutaAHash({ tab: "ingresos" }, base)).toBe("#/p/abc123/ingresos");
+    expect(rutaAHash({ tab: "gastos", seccionId: "s1" }, base)).toBe("#/p/abc123/gastos/s1");
+    expect(parseRuta("#/p/abc123/gastos/s1", base)).toEqual({ tab: "gastos", seccionId: "s1" });
+    expect(parseRuta("#/p/abc123/ajustes", base)).toEqual({ tab: "ajustes" });
+  });
+  it("ida y vuelta para todas las pestañas", () => {
+    for (const tab of TABS) expect(parseRuta(rutaAHash({ tab }, base), base)).toEqual({ tab });
+  });
+  it("un hash de otro presupuesto no se interpreta", () => {
+    expect(parseRuta("#/p/otro/ingresos", base)).toEqual({ tab: "resumen" });
+    expect(parseRuta("#/p/abc1234/ingresos", base)).toEqual({ tab: "resumen" });
+  });
+  it("presupuestoDeHash lee el id o devuelve null en la lista", () => {
+    expect(presupuestoDeHash("#/p/abc123")).toBe("abc123");
+    expect(presupuestoDeHash("#/p/abc123/gastos/x")).toBe("abc123");
+    expect(presupuestoDeHash("#/p/inicial/ingresos")).toBe("inicial");
+    for (const h of ["", "#/", "#/gastos", "#/p/", "#/p/../x", "#/p/a b"]) expect(presupuestoDeHash(h)).toBeNull();
+  });
+  it("hashPresupuesto arma el link", () => {
+    expect(hashPresupuesto("abc")).toBe("#/p/abc");
+    expect(presupuestoDeHash(hashPresupuesto("abc"))).toBe("abc");
   });
 });
 

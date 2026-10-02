@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import RegistrarSW from "@/components/RegistrarSW";
 
 export const metadata: Metadata = {
-  title: "Presupuesto de fin de año",
-  description: "Presupuesto compartido de fin de año y enero",
+  title: "Presupuestos",
+  description: "Presupuestos compartidos para planificar y llevar el control",
+  applicationName: "Presupuestos",
   robots: { index: false, follow: false },
-  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
-  appleWebApp: { capable: true, title: "Presupuesto", statusBarStyle: "black-translucent" },
+  icons: { icon: "/icon-192.png", apple: "/icon-180.png" },
+  appleWebApp: { capable: true, title: "Presupuestos", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
@@ -28,7 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: TEMA }} />
       </head>
-      <body className="min-h-dvh antialiased">{children}</body>
+      <body className="min-h-dvh antialiased">
+        {children}
+        <RegistrarSW />
+      </body>
     </html>
   );
 }

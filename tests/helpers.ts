@@ -25,7 +25,7 @@ export const destino = (
 });
 
 export const presupuesto = (extra: Partial<Presupuesto> = {}): Presupuesto => ({
-  rev: 0, ingresos: [], secciones: [], destinos: [], ...extra,
+  nombre: "Prueba", rev: 0, ingresos: [], secciones: [], destinos: [], ...extra,
 });
 
 export const seed = () => crearEjemplo();

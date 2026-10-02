@@ -58,6 +58,12 @@ export interface Destino {
 }
 
 export interface Presupuesto {
+  /** Nombre del presupuesto (ej. "Fin de año 2026"). */
+  nombre: string;
+  /** Fecha de creación (ISO). */
+  creado?: string;
+  /** Los archivados salen de la lista principal pero no se pierden. */
+  archivado?: boolean;
   rev: number; // se incrementa en cada guardado; evita pisar cambios de la otra persona
   ingresos: Ingreso[];
   secciones: Seccion[];

@@ -80,7 +80,7 @@ describe("resumen inicial", () => {
   });
   it("abre en Resumen y muestra el aviso de ejemplos", () => {
     montar();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Resumen");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ejemplo");
     expect(screen.getByText(/datos de/i)).toBeInTheDocument();
   });
   it("sin ingresos ni gastos: 'Nos sobra $ 0' y estados vacíos amigables", () => {

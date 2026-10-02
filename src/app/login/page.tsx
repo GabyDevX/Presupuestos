@@ -31,25 +31,31 @@ export default function Login() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-4">
-      <form onSubmit={entrar} className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow">
-        <div className="text-center">
-          <div className="text-4xl">🎄</div>
-          <h1 className="mt-2 text-xl font-bold">Presupuesto de fin de año</h1>
-          <p className="text-sm text-slate-500">Ingresá la contraseña compartida</p>
+      <form onSubmit={entrar} className="w-full max-w-sm space-y-5 rounded-2xl border border-line bg-surface p-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Presupuestos</h1>
+          <p className="mt-1 text-sm text-muted">Ingresá la contraseña compartida.</p>
         </div>
-        <input
-          type="password"
-          autoFocus
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Contraseña"
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-base"
-        />
-        {error && <p className="text-sm text-rose-600">{error}</p>}
+        <div>
+          <label htmlFor="password" className="mb-1.5 block text-xs text-muted">Contraseña</label>
+          <input
+            id="password"
+            type="password"
+            autoFocus
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="field"
+          />
+        </div>
+        {error && (
+          <p className="text-sm text-bad" role="alert">
+            {error}
+          </p>
+        )}
         <button
           disabled={cargando || !password}
-          className="w-full rounded-xl bg-slate-900 py-3 font-semibold text-white disabled:opacity-50"
+          className="min-h-12 w-full rounded-xl bg-accent font-semibold text-accent-fg transition-opacity disabled:opacity-50"
         >
           {cargando ? "Entrando…" : "Entrar"}
         </button>

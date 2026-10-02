@@ -1,6 +1,8 @@
-# Presupuesto de fin de año
+# Presupuestos
 
-App web (en español, pensada para el celular) para planificar entre dos personas el presupuesto de Navidad, fin de año y enero: ingresos con cronograma, categorías de gastos con checkboxes de "pagado" y un comparador de destinos de vacaciones. Moneda: pesos uruguayos (UYU).
+App web (en español, pensada para el celular, instalable como PWA) para llevar presupuestos compartidos entre dos personas: ingresos con cronograma, categorías de gastos con checks de "pagado" y un comparador de destinos de vacaciones. Moneda: pesos uruguayos (UYU).
+
+Se pueden tener **varios presupuestos** (por ejemplo "Fin de año 2026", "Fin de año 2027" o uno para otro evento): se crean desde la lista, en blanco o como copia de uno anterior (mismas categorías, ítems y personas, con los montos en 0, nada pagado y las fechas de ingresos corridas un año). Cada uno se puede renombrar, archivar o eliminar desde Ajustes.
 
 Next.js (App Router) + TypeScript + Tailwind CSS. Los datos se guardan en Upstash Redis como un único documento JSON y se comparten entre ambos. El acceso está protegido por una contraseña compartida.
 
@@ -27,9 +29,17 @@ Cubren los cálculos (totales, pagado/pendiente, balance, redondeo, escenarios d
 
 ## Navegación y diseño
 
-Cuatro pantallas: **Resumen** (balance y categorías), **Gastos** (categorías y detalle de cada una), **Ingresos** y **Ajustes**. En el celular hay una barra inferior; en la computadora, una barra lateral. Cada pantalla tiene su propio link (`#/gastos/<id>`) y el botón "atrás" del navegador funciona.
+La app abre en la **lista de Presupuestos**. Dentro de cada uno hay cuatro pantallas: **Resumen** (balance y categorías), **Gastos** (categorías y detalle de cada una), **Ingresos** y **Ajustes**. En el celular hay una barra inferior; en la computadora, una barra lateral. Cada pantalla tiene su propio link (`#/p/<id>/gastos/<sección>`) y el botón "atrás" del navegador funciona.
 
-Modo oscuro por defecto; en Ajustes se puede elegir Claro o Sistema. Los colores están definidos como variables en `src/app/globals.css`. También se puede instalar como app (menú del navegador → "Instalar" / "Agregar a pantalla de inicio").
+Modo oscuro por defecto; se puede elegir Claro o Sistema. Los colores están definidos como variables en `src/app/globals.css`.
+
+## PWA (instalable)
+
+- **Android / Chrome:** menú ⋮ → "Instalar app".
+- **iPhone / Safari:** Compartir → "Agregar a pantalla de inicio".
+- **Computadora (Chrome/Edge):** ícono de instalar en la barra de direcciones.
+
+Hay manifest, íconos (incluido el maskable y el de iOS) y un service worker (`public/sw.js`). Los datos **siempre** se piden al servidor y nunca se guardan en el dispositivo; sin conexión la app muestra una pantalla de aviso (`public/offline.html`) en vez del error del navegador. Los archivos estáticos se guardan para que abra más rápido.
 
 ## Desplegarlo en Vercel
 
@@ -42,7 +52,7 @@ Si cambiás `APP_PASSWORD`, las sesiones abiertas se cierran y hay que volver a 
 
 ## Cómo funciona
 
-- **Datos iniciales:** la primera vez se carga el presupuesto real (aguinaldos, salarios vacacionales, patente, seguro, lista de regalos y cumpleaños) con los montos pendientes en 0. Está en `src/lib/seed.ts` y solo se usa mientras no haya nada guardado.
+- **Datos iniciales:** la primera vez se crea el presupuesto "Fin de año 2026" con los datos reales (aguinaldos, salarios vacacionales, patente, seguro, lista de regalos y cumpleaños) con los montos pendientes en 0. Está en `src/lib/seed.ts` y solo se usa mientras no haya nada guardado. Si venías usando la versión de un solo presupuesto, tus datos pasan solos a ese primer presupuesto.
 - **Lista de regalos:** tiene un presupuesto general por persona; al editar el monto de alguien (cuando encuentran su regalo) ese queda fijo, y el botón ↺ lo devuelve al general.
 - **Cambios de a dos:** cada guardado lleva un número de versión. Si la otra persona guardó primero, se carga su versión y se avisa. La app también se actualiza sola al volver a abrirla y cada 30 segundos.
 - **Seguro de la casa:** se cuenta en el presupuesto actual aunque se pague en febrero.

@@ -18,6 +18,7 @@ const ej = (nombre: string, monto: number, pagado = false): Item =>
 export function crearEjemplo(): Presupuesto {
   n = 0;
   return {
+    nombre: "Ejemplo",
     rev: 0,
     ingresos: [
       { id: id(), nombre: "Aguinaldo (ejemplo)", persona: "yo", fecha: "2026-12-20", monto: 60000, ejemplo: true },

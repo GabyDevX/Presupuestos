@@ -8,9 +8,17 @@ export interface Ruta {
 
 export const TABS: Tab[] = ["resumen", "gastos", "ingresos", "ajustes"];
 
-/** "#/gastos/abc" → { tab: "gastos", seccionId: "abc" }. Cualquier otra cosa → Resumen. */
-export function parseRuta(hash: string): Ruta {
-  const [tab, id] = hash.replace(/^#\/?/, "").split("/");
+/**
+ * "#/gastos/abc" → { tab: "gastos", seccionId: "abc" }. Cualquier otra cosa → Resumen.
+ * Con `base` (ej. "#/p/xyz") se interpreta lo que viene después de esa base.
+ */
+export function parseRuta(hash: string, base = ""): Ruta {
+  let h = hash;
+  if (base) {
+    if (hash !== base && !hash.startsWith(base + "/")) return { tab: "resumen" };
+    h = hash.slice(base.length);
+  }
+  const [tab, id] = h.replace(/^#?\/?/, "").split("/");
   if (!TABS.includes(tab as Tab)) return { tab: "resumen" };
   if (tab === "gastos" && id) {
     try {
@@ -22,8 +30,17 @@ export function parseRuta(hash: string): Ruta {
   return { tab: tab as Tab };
 }
 
-export function rutaAHash(r: Ruta): string {
-  if (r.tab === "resumen") return "#/";
-  if (r.tab === "gastos" && r.seccionId) return `#/gastos/${encodeURIComponent(r.seccionId)}`;
-  return `#/${r.tab}`;
+export function rutaAHash(r: Ruta, base = ""): string {
+  if (r.tab === "resumen") return base || "#/";
+  const pref = base || "#";
+  if (r.tab === "gastos" && r.seccionId) return `${pref}/gastos/${encodeURIComponent(r.seccionId)}`;
+  return `${pref}/${r.tab}`;
 }
+
+/** Id del presupuesto abierto según el hash ("#/p/abc/gastos" → "abc"), o null en la lista. */
+export function presupuestoDeHash(hash: string): string | null {
+  const m = /^#\/p\/([A-Za-z0-9_-]{1,40})(?:\/|$)/.exec(hash);
+  return m ? m[1] : null;
+}
+
+export const hashPresupuesto = (id: string) => `#/p/${id}`;

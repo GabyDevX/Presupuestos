@@ -64,6 +64,10 @@ const esDestino = (x: unknown) =>
 export function esPresupuestoValido(x: unknown): x is Presupuesto {
   return (
     esObj(x) &&
+    typeof x.nombre === "string" &&
+    x.nombre.length <= 120 &&
+    opcional(x.creado, esTexto) &&
+    opcional(x.archivado, esBool) &&
     typeof x.rev === "number" &&
     Number.isInteger(x.rev) &&
     x.rev >= 0 &&

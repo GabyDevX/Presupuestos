@@ -30,7 +30,19 @@ const TITULOS: Record<Tab, string> = {
 
 type Estado = "guardado" | "guardando" | "error";
 
-export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
+export default function Presupuestos({
+  inicial,
+  id = "inicial",
+  base = "",
+  irALista = () => {},
+}: {
+  inicial: Presupuesto;
+  /** Id del presupuesto en el servidor. */
+  id?: string;
+  /** Prefijo del hash de este presupuesto (ej. "#/p/abc"). */
+  base?: string;
+  irALista?: () => void;
+}) {
   const [p, setP] = useState(inicial);
   const [estado, setEstado] = useState<Estado>("guardado");
   const [aviso, setAviso] = useState("");
@@ -52,7 +64,7 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
     pendiente.current = false;
     try {
       const cuerpo = JSON.stringify(ref.current);
-      const r = await fetch("/api/presupuesto", {
+      const r = await fetch(`/api/presupuestos/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: cuerpo,
@@ -60,6 +72,12 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
       });
       if (r.status === 401) {
         window.location.href = "/login";
+        return;
+      }
+      if (r.status === 404) {
+        // Lo eliminaron desde otro lado.
+        pendiente.current = false;
+        irALista();
         return;
       }
       if (r.status === 409) {
@@ -110,7 +128,7 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
     const refrescar = async () => {
       if (pendiente.current || volando.current) return;
       try {
-        const r = await fetch("/api/presupuesto", { cache: "no-store" });
+        const r = await fetch(`/api/presupuestos/${id}`, { cache: "no-store" });
         if (!r.ok) return;
         const { data } = await r.json();
         if (!pendiente.current && !volando.current && data.rev > ref.current.rev) reemplazar(data);
@@ -150,21 +168,35 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
 
   // Navegación con historial del navegador: el botón "atrás" y los links directos funcionan.
   useEffect(() => {
-    setRuta(parseRuta(window.location.hash));
-    const alCambiar = () => setRuta(parseRuta(window.location.hash));
+    setRuta(parseRuta(window.location.hash, base));
+    const alCambiar = () => setRuta(parseRuta(window.location.hash, base));
     window.addEventListener("popstate", alCambiar);
     return () => window.removeEventListener("popstate", alCambiar);
-  }, []);
+  }, [base]);
 
   const ir = useCallback((r: Ruta) => {
-    window.history.pushState(null, "", rutaAHash(r));
+    window.history.pushState(null, "", rutaAHash(r, base));
     setRuta(r);
     window.scrollTo(0, 0);
-  }, []);
+  }, [base]);
 
   const borrarEjemplos = () => {
     if (!confirmar("¿Borrar todos los datos de ejemplo? Tus propios datos y la estructura se mantienen.")) return;
     cambiar(quitarEjemplos);
+  };
+
+  const eliminarPresupuesto = async () => {
+    if (!confirmar(`¿Eliminar "${p.nombre || "este presupuesto"}"? Se pierden todos sus datos y no se puede deshacer.`)) return;
+    clearTimeout(timer.current);
+    timer.current = undefined;
+    pendiente.current = false;
+    try {
+      const r = await fetch(`/api/presupuestos/${id}`, { method: "DELETE" });
+      if (!r.ok && r.status !== 404) throw new Error();
+      irALista();
+    } catch {
+      setAviso("No se pudo eliminar. Revisá tu conexión y probá de nuevo.");
+    }
   };
 
   const salir = async () => {
@@ -176,7 +208,8 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
   const indiceSeccion = ruta.seccionId ? p.secciones.findIndex((s) => s.id === ruta.seccionId) : -1;
   const seccion = indiceSeccion >= 0 ? p.secciones[indiceSeccion] : undefined;
   const enDetalle = ruta.tab === "gastos" && !!seccion;
-  const titulo = enDetalle ? seccion!.nombre || "Sin nombre" : TITULOS[ruta.tab];
+  const enRaiz = ruta.tab === "resumen" && !enDetalle;
+  const titulo = enDetalle ? seccion!.nombre || "Sin nombre" : enRaiz ? p.nombre || "Sin nombre" : TITULOS[ruta.tab];
 
   const indicadorGuardado = (
     <span className="flex items-center gap-2 text-xs text-muted">
@@ -214,7 +247,13 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
         aria-label="Principal"
         className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-line bg-surface p-4 lg:flex"
       >
-        <p className="px-3 pb-6 pt-2 text-lg font-semibold tracking-tight">Presupuesto</p>
+        <button
+          onClick={irALista}
+          className="mb-4 flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-lg font-semibold tracking-tight transition-colors hover:bg-raised"
+        >
+          <Icono nombre="volver" className="h-4 w-4 text-muted" />
+          Presupuestos
+        </button>
         <div className="flex flex-col gap-1">
           {NAV.map((n) =>
             botonNav(n, "flex min-h-11 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors hover:bg-raised"),
@@ -225,6 +264,15 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
 
       <div className="mx-auto w-full max-w-2xl px-4">
         <header className="sticky top-0 z-10 -mx-4 flex items-center gap-2 bg-canvas px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          {enRaiz && (
+            <button
+              onClick={irALista}
+              aria-label="Volver a Presupuestos"
+              className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted transition-colors hover:bg-raised hover:text-fg"
+            >
+              <Icono nombre="volver" />
+            </button>
+          )}
           {enDetalle && (
             <button
               onClick={() => ir({ tab: "gastos" })}
@@ -288,7 +336,16 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
             <IngresosView ingresos={p.ingresos} mutar={(fn: (l: Ingreso[]) => void) => cambiar((d) => fn(d.ingresos))} />
           )}
 
-          {ruta.tab === "ajustes" && <AjustesView salir={salir} />}
+          {ruta.tab === "ajustes" && (
+            <AjustesView
+              salir={salir}
+              nombre={p.nombre}
+              cambiarNombre={(n) => cambiar((d) => (d.nombre = n))}
+              archivado={!!p.archivado}
+              archivar={(v) => cambiar((d) => (d.archivado = v))}
+              eliminar={eliminarPresupuesto}
+            />
+          )}
         </main>
       </div>
 

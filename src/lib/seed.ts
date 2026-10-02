@@ -1,5 +1,7 @@
 import type { Item, Presupuesto, Subseccion } from "./types";
 
+export const NOMBRE_INICIAL = "Fin de año 2026";
+
 let n = 0;
 const id = () => `seed-${++n}`;
 
@@ -28,6 +30,7 @@ const PERSONAS_REGALOS = [
 export function crearSeed(): Presupuesto {
   n = 0;
   return {
+    nombre: NOMBRE_INICIAL,
     rev: 0,
     ingresos: [
       { id: id(), nombre: "Aguinaldo", persona: "yo", fecha: "2026-12-15", monto: 60000 },
