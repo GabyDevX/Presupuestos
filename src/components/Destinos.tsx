@@ -24,35 +24,36 @@ export default function Destinos({
   const elegidos = destinos.filter((d) => d.seleccionado).length;
 
   return (
-    <div className="mt-3 rounded-xl bg-sky-50 p-3">
-      <h3 className="font-semibold text-sky-900">Opciones de destino</h3>
-      <p className="text-sm text-sky-800">
+    <div className="rounded-2xl border border-line bg-surface p-4">
+      <h3 className="font-semibold">Opciones de destino</h3>
+      <p className="text-sm text-muted">
         Marcá una o varias para sumarlas al presupuesto
         {elegidos > 0 && ` (${elegidos} elegida${elegidos > 1 ? "s" : ""})`}.
       </p>
 
       {destinos.length === 0 && (
-        <p className="py-3 text-sm text-slate-500">
-          Todavía no hay destinos. Agregá una opción para comparar costos.
-        </p>
+        <p className="py-4 text-sm text-muted">Todavía no hay destinos. Agregá una opción para comparar costos.</p>
       )}
 
-      <div className="mt-2 space-y-3">
+      <div className="mt-3 space-y-3">
         {destinos.map((d, idx) => {
           const total = totalDestino(d);
           const balanceSolo = balanceSoloDestino(balanceBase, d);
           return (
             <div
               key={d.id}
-              className={`rounded-xl border bg-white p-3 ${d.seleccionado ? "border-sky-500 ring-1 ring-sky-500" : "border-slate-200"}`}
+              data-destino={d.nombre}
+              className={`rounded-xl border p-3 transition-colors ${
+                d.seleccionado ? "border-accent bg-raised" : "border-line"
+              }`}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
+                  className="check check-accent"
                   checked={d.seleccionado}
                   aria-label={`Seleccionar ${d.nombre}`}
                   onChange={(e) => mutar((l) => (l[idx].seleccionado = e.target.checked))}
-                  className="h-6 w-6 shrink-0 accent-sky-600"
                 />
                 <TextoInput
                   valor={d.nombre}
@@ -62,45 +63,40 @@ export default function Destinos({
                 />
                 <BotonIcono
                   titulo="Eliminar destino"
+                  icono="basura"
                   peligro
                   onClick={() => {
-                    if (confirmar(`¿Eliminar la opción "${d.nombre || "sin nombre"}"?`))
-                      mutar((l) => l.splice(idx, 1));
+                    if (confirmar(`¿Eliminar la opción "${d.nombre || "sin nombre"}"?`)) mutar((l) => l.splice(idx, 1));
                   }}
-                >
-                  ✕
-                </BotonIcono>
+                />
               </div>
               <textarea
                 value={d.notas}
                 onChange={(e) => mutar((l) => (l[idx].notas = e.target.value))}
                 placeholder="Notas: dónde iríamos, links, ideas…"
                 rows={2}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                className="field mt-2 text-sm"
               />
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-3">
                 {CAMPOS.map(([campo, etiqueta]) => (
-                  <label key={campo} className="text-xs text-slate-500">
+                  <label key={campo} className="text-xs text-muted">
                     {etiqueta}
                     <MontoInput
                       valor={d[campo]}
                       onChange={(n) => mutar((l) => (l[idx][campo] = n))}
-                      className="mt-0.5 w-full"
+                      className="mt-1"
                       etiqueta={`${etiqueta} de ${d.nombre}`}
                     />
                   </label>
                 ))}
               </div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-slate-500">Total de la opción</span>
-                <Dinero n={total} className="text-base font-bold" />
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <span className="text-muted">Total de la opción</span>
+                <Dinero n={total} className="text-base font-semibold" />
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-500">Balance si elegimos solo esta</span>
-                <Dinero
-                  n={balanceSolo}
-                  className={`font-semibold ${balanceSolo >= 0 ? "text-emerald-700" : "text-rose-600"}`}
-                />
+              <div className="mt-0.5 flex items-center justify-between text-xs">
+                <span className="text-muted">Balance si elegimos solo esta</span>
+                <Dinero n={balanceSolo} className={`font-medium ${balanceSolo >= 0 ? "text-ok" : "text-bad"}`} />
               </div>
             </div>
           );

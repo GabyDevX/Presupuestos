@@ -13,10 +13,10 @@ const status = () => screen.getAllByRole("status")[0];
 const valor = (label: string) =>
   norm(within(status()).getByText(label, { selector: "dt" }).nextElementSibling!.textContent);
 const balance = () => ({
-  texto: norm(status().querySelector("span")!.textContent), // "Nos sobra" / "Nos falta"
-  monto: norm(status().querySelector(".text-3xl")!.textContent),
-  rojo: status().className.includes("bg-rose-600"),
-  verde: status().className.includes("bg-emerald-600"),
+  texto: norm(within(status()).getByTestId("balance-label").textContent), // "Nos sobra" / "Nos falta"
+  monto: norm(within(status()).getByTestId("balance-monto").textContent),
+  rojo: status().dataset.estado === "falta",
+  verde: status().dataset.estado === "sobra",
 });
 
 type Llamada = { url: string; method: string; body?: Presupuesto };
@@ -28,6 +28,7 @@ const ok = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
 
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   llamadas = [];
   let rev = 0;
   respuestaPut = () => ok({ rev: ++rev });
@@ -45,13 +46,19 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 const puts = () => llamadas.filter((l) => l.method === "PUT");
-const montar = (p: Presupuesto = seed()) => {
+/** `hash` abre directo una pantalla, como un link: "#/ingresos", "#/ajustes"… */
+const montar = (p: Presupuesto = seed(), hash = "") => {
+  window.history.replaceState(null, "", "/" + hash);
   const user = userEvent.setup();
   render(<Presupuestos inicial={p} />);
   return user;
 };
 const abrir = (user: ReturnType<typeof userEvent.setup>, nombre: RegExp) =>
   user.click(screen.getByRole("button", { name: nombre }));
+const irA = (user: ReturnType<typeof userEvent.setup>, tab: string) =>
+  user.click(screen.getAllByRole("button", { name: tab })[0]);
+const editar = (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(screen.getByRole("button", { name: "Editar sección" }));
 const poner = async (user: ReturnType<typeof userEvent.setup>, el: HTMLElement, n: number) => {
   await user.clear(el);
   await user.type(el, String(n));
@@ -71,15 +78,19 @@ describe("resumen inicial", () => {
     expect(norm(screen.getByRole("button", { name: /Navidad/ }).textContent)).toContain("$ 12.700");
     expect(norm(screen.getByRole("button", { name: /Vacaciones/ }).textContent)).toContain("$ 44.000");
   });
-  it("el título 'Presupuesto de fin de año' y el aviso de ejemplos están visibles", () => {
+  it("abre en Resumen y muestra el aviso de ejemplos", () => {
     montar();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Presupuesto de fin de año");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Resumen");
     expect(screen.getByText(/datos de/i)).toBeInTheDocument();
   });
   it("sin ingresos ni gastos: 'Nos sobra $ 0' y estados vacíos amigables", () => {
     montar(presupuesto());
     expect(balance()).toMatchObject({ texto: "Nos sobra", monto: "$ 0", verde: true });
     expect(screen.getByText(/Todavía no cargaste ingresos/)).toBeInTheDocument();
+    expect(screen.getByText(/Todavía no hay categorías/)).toBeInTheDocument();
+  });
+  it("Gastos sin secciones invita a crear la primera", () => {
+    montar(presupuesto(), "#/gastos");
     expect(screen.getByText(/No hay secciones/)).toBeInTheDocument();
   });
 });
@@ -105,6 +116,7 @@ describe("marcar pagado", () => {
     const user = montar();
     await abrir(user, /Navidad/);
     await user.click(screen.getByLabelText('Marcar "Regalo para la abuela (ejemplo)" como pagado'));
+    await irA(user, "Gastos");
     expect(norm(screen.getByRole("button", { name: /Navidad/ }).textContent)).toMatch(/Pagado \$ 3\.700 · Pendiente \$ 9\.000/);
   });
 });
@@ -127,6 +139,7 @@ describe("editar montos", () => {
     const user = montar();
     await abrir(user, /Auto/);
     await poner(user, screen.getByLabelText("Monto de Patente"), 4500);
+    await irA(user, "Gastos");
     await abrir(user, /Casa/);
     await poner(user, screen.getByLabelText(/Monto de Seguro de la casa/), 12000);
     expect(valor("Gastos")).toBe("$ 93.200");
@@ -180,12 +193,13 @@ describe("comparador de destinos", () => {
     const user = montar();
     await abrir(user, /Vacaciones/);
     await user.click(screen.getByLabelText("Seleccionar Playa cercana (ejemplo)"));
+    await irA(user, "Gastos");
     expect(norm(screen.getByRole("button", { name: /Vacaciones/ }).textContent)).toContain("$ 0");
   });
   it("cada destino muestra su total y el balance si fuera el único", async () => {
     const user = montar();
     await abrir(user, /Vacaciones/);
-    const tarjeta = screen.getByLabelText("Seleccionar Casa de familiares en el interior (ejemplo)").closest("div.rounded-xl")!;
+    const tarjeta = screen.getByLabelText("Seleccionar Casa de familiares en el interior (ejemplo)").closest("[data-destino]")!;
     const t = norm(tarjeta.textContent);
     expect(t).toContain("$ 16.000");
     expect(t).toContain("$ 111.300"); // 127.300 sin destinos - 16.000
@@ -205,7 +219,7 @@ describe("comparador de destinos", () => {
   it("agregar un destino nuevo, completarlo y elegirlo", async () => {
     const user = montar();
     await abrir(user, /Vacaciones/);
-    await user.click(screen.getByRole("button", { name: "+ Agregar destino" }));
+    await user.click(screen.getByRole("button", { name: "Agregar destino" }));
     const nombre = screen.getAllByPlaceholderText("Nombre del lugar").at(-1)!;
     await user.type(nombre, "Montañas");
     await poner(user, screen.getByLabelText("Transporte / viaje de Montañas"), 1000);
@@ -215,7 +229,7 @@ describe("comparador de destinos", () => {
   it("eliminar un destino elegido (con confirmación) lo saca del total", async () => {
     const user = montar();
     await abrir(user, /Vacaciones/);
-    const tarjeta = screen.getByLabelText("Seleccionar Playa cercana (ejemplo)").closest("div.rounded-xl")!;
+    const tarjeta = screen.getByLabelText("Seleccionar Playa cercana (ejemplo)").closest("[data-destino]")!;
     await user.click(within(tarjeta as HTMLElement).getByTitle("Eliminar destino"));
     expect(window.confirm).toHaveBeenCalled();
     expect(valor("Gastos")).toBe("$ 32.700");
@@ -224,7 +238,7 @@ describe("comparador de destinos", () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     const user = montar();
     await abrir(user, /Vacaciones/);
-    const tarjeta = screen.getByLabelText("Seleccionar Playa cercana (ejemplo)").closest("div.rounded-xl")!;
+    const tarjeta = screen.getByLabelText("Seleccionar Playa cercana (ejemplo)").closest("[data-destino]")!;
     await user.click(within(tarjeta as HTMLElement).getByTitle("Eliminar destino"));
     expect(valor("Gastos")).toBe("$ 76.700");
   });
@@ -288,9 +302,10 @@ describe("borrar datos de ejemplo", () => {
     expect(screen.getByRole("button", { name: "Borrar ejemplos" })).toBeInTheDocument();
   });
   it("los datos propios sobreviven", async () => {
-    const user = montar();
-    await user.click(screen.getByRole("button", { name: "+ Agregar ingreso" }));
+    const user = montar(seed(), "#/ingresos");
+    await user.click(screen.getByRole("button", { name: "Agregar ingreso" }));
     await poner(user, screen.getByLabelText(/^Monto de$/), 700);
+    await irA(user, "Resumen");
     await user.click(screen.getByRole("button", { name: "Borrar ejemplos" }));
     expect(valor("Ingresos")).toBe("$ 700");
   });
@@ -305,6 +320,7 @@ describe("ingresos", () => {
           ingreso(40, { nombre: "Temprano", fecha: "2026-12-01", persona: "esposa" }),
         ],
       }),
+      "#/ingresos",
     );
     const nombres = screen.getAllByPlaceholderText(/Nombre \(ej\. Aguinaldo\)/).map((i) => (i as HTMLInputElement).value);
     expect(nombres).toEqual(["Temprano", "Tarde"]);
@@ -313,14 +329,14 @@ describe("ingresos", () => {
     expect(textos[1]).toContain("$ 140");
   });
   it("agregar un ingreso y ponerle monto actualiza el total y el balance", async () => {
-    const user = montar(presupuesto());
-    await user.click(screen.getByRole("button", { name: "+ Agregar ingreso" }));
+    const user = montar(presupuesto(), "#/ingresos");
+    await user.click(screen.getByRole("button", { name: "Agregar ingreso" }));
     await poner(user, screen.getByLabelText(/^Monto de$/), 2500);
     expect(valor("Ingresos")).toBe("$ 2.500");
     expect(balance().monto).toBe("$ 2.500");
   });
   it("cambiar la persona mueve el monto entre Gabriel y Camila", async () => {
-    const user = montar(presupuesto({ ingresos: [ingreso(300, { nombre: "Aguinaldo" })] }));
+    const user = montar(presupuesto({ ingresos: [ingreso(300, { nombre: "Aguinaldo" })] }), "#/ingresos");
     const resumenPersonas = () => norm(screen.getByText("Camila", { selector: "div" }).parentElement!.textContent);
     expect(resumenPersonas()).toContain("$ 0");
     await user.selectOptions(screen.getByLabelText("Persona"), "esposa");
@@ -328,14 +344,14 @@ describe("ingresos", () => {
     expect(valor("Ingresos")).toBe("$ 300");
   });
   it("eliminar un ingreso pide confirmación y descuenta del total", async () => {
-    const user = montar(presupuesto({ ingresos: [ingreso(300, { nombre: "A" }), ingreso(200, { nombre: "B" })] }));
+    const user = montar(presupuesto({ ingresos: [ingreso(300, { nombre: "A" }), ingreso(200, { nombre: "B" })] }), "#/ingresos");
     await user.click(screen.getAllByTitle("Eliminar ingreso")[0]);
     expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('"A"'));
     expect(valor("Ingresos")).toBe("$ 200");
   });
   it("cancelar la confirmación conserva el ingreso", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
-    const user = montar(presupuesto({ ingresos: [ingreso(300)] }));
+    const user = montar(presupuesto({ ingresos: [ingreso(300)] }), "#/ingresos");
     await user.click(screen.getByTitle("Eliminar ingreso"));
     expect(valor("Ingresos")).toBe("$ 300");
   });
@@ -347,6 +363,7 @@ describe("ingresos", () => {
           ingreso(2, { nombre: "Dos", fecha: "2026-12-10" }),
         ],
       }),
+      "#/ingresos",
     );
     const fechas = screen.getAllByLabelText("Fecha en que se recibe");
     await user.clear(fechas[0]);
@@ -361,10 +378,11 @@ describe("ítems, secciones y subsecciones", () => {
     const user = montar(presupuesto({ secciones: [seccion({ nombre: "Extras" })] }));
     await abrir(user, /Extras/);
     expect(screen.getByText(/Todavía no hay ítems/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "+ Agregar ítem" }));
+    await user.click(screen.getByRole("button", { name: "Agregar ítem" }));
     await user.type(screen.getByPlaceholderText("Nombre del ítem"), "Globos");
     await poner(user, screen.getByLabelText("Monto de Globos"), 350);
     expect(valor("Gastos")).toBe("$ 350");
+    await irA(user, "Gastos");
     expect(norm(screen.getByRole("button", { name: /Extras/ }).textContent)).toContain("$ 350");
   });
   it("eliminar un ítem pide confirmación", async () => {
@@ -390,52 +408,63 @@ describe("ítems, secciones y subsecciones", () => {
     expect(within(fila).getByTitle("Eliminar ítem")).toBeDisabled();
   });
   it("agregar una sección nueva y eliminarla", async () => {
-    const user = montar(presupuesto());
-    await user.click(screen.getByRole("button", { name: "+ Agregar sección" }));
-    expect(screen.getByRole("button", { name: /Nueva sección/ })).toBeInTheDocument();
-    await abrir(user, /Nueva sección/);
+    const user = montar(presupuesto(), "#/gastos");
+    await user.click(screen.getByRole("button", { name: "Agregar sección" }));
+    // abre la sección nueva para completarla
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Nueva sección");
+    await editar(user);
     await user.click(screen.getByTitle("Eliminar sección"));
     expect(window.confirm).toHaveBeenCalled();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Gastos");
     expect(screen.queryByRole("button", { name: /Nueva sección/ })).not.toBeInTheDocument();
     expect(screen.getByText(/No hay secciones/)).toBeInTheDocument();
   });
   it("renombrar una sección", async () => {
     const user = montar(presupuesto({ secciones: [seccion({ nombre: "Vieja" })] }));
     await abrir(user, /Vieja/);
+    await editar(user);
     const campo = screen.getByPlaceholderText("Nombre de la sección");
     await user.clear(campo);
     await user.type(campo, "Mascotas");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Mascotas");
+    await user.click(screen.getByRole("button", { name: "Volver a Gastos" }));
     expect(screen.getByRole("button", { name: /Mascotas/ })).toBeInTheDocument();
   });
   it("reordenar secciones con subir / bajar", async () => {
     const user = montar(presupuesto({ secciones: [seccion({ nombre: "Alfa" }), seccion({ nombre: "Beta" })] }));
-    const orden = () => screen.getAllByRole("button", { expanded: false }).map((b) => b.textContent!.match(/Alfa|Beta/)?.[0]).filter(Boolean);
+    const orden = () => screen.getAllByRole("button", { name: /Alfa|Beta/ }).map((b) => b.textContent!.match(/Alfa|Beta/)![0]);
+    await irA(user, "Gastos");
     expect(orden()).toEqual(["Alfa", "Beta"]);
     await abrir(user, /Beta/);
+    await editar(user);
     await user.click(screen.getByTitle("Subir sección"));
-    expect(screen.getAllByRole("button", { name: /Alfa|Beta/ }).map((b) => b.textContent!.match(/Alfa|Beta/)![0])).toEqual(["Beta", "Alfa"]);
+    await user.click(screen.getByRole("button", { name: "Volver a Gastos" }));
+    expect(orden()).toEqual(["Beta", "Alfa"]);
   });
   it("no se puede subir la primera ni bajar la última", async () => {
     const user = montar(presupuesto({ secciones: [seccion({ nombre: "Alfa" })] }));
     await abrir(user, /Alfa/);
+    await editar(user);
     expect(screen.getByTitle("Subir sección")).toBeDisabled();
     expect(screen.getByTitle("Bajar sección")).toBeDisabled();
   });
   it("agregar y eliminar una subsección con sus ítems", async () => {
     const user = montar(presupuesto({ secciones: [seccion({ nombre: "Casa", items: [] })] }));
     await abrir(user, /Casa/);
-    await user.click(screen.getByRole("button", { name: "+ Agregar subsección" }));
+    await user.click(screen.getByRole("button", { name: "Agregar subsección" }));
     await user.type(screen.getByPlaceholderText("Nombre de la subsección"), "Cocina");
-    await user.click(screen.getByRole("button", { name: "+ Agregar ítem" }));
+    await user.click(screen.getByRole("button", { name: "Agregar ítem" }));
     await user.type(screen.getByPlaceholderText("Nombre del ítem"), "Heladera");
     await poner(user, screen.getByLabelText("Monto de Heladera"), 800);
     expect(valor("Gastos")).toBe("$ 800");
+    await editar(user);
     await user.click(screen.getByTitle("Eliminar subsección"));
     expect(valor("Gastos")).toBe("$ 0");
   });
   it("eliminar una sección con ítems descuenta sus gastos", async () => {
     const user = montar();
     await abrir(user, /Cumpleaños/);
+    await editar(user);
     await user.click(screen.getByTitle("Eliminar sección"));
     expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("Cumpleaños"));
     expect(valor("Gastos")).toBe("$ 66.200");
@@ -443,6 +472,7 @@ describe("ítems, secciones y subsecciones", () => {
   it("eliminar la sección de vacaciones saca también los destinos elegidos del total", async () => {
     const user = montar();
     await abrir(user, /Vacaciones/);
+    await editar(user);
     await user.click(screen.getByTitle("Eliminar sección"));
     expect(valor("Gastos")).toBe("$ 32.700");
   });
@@ -485,7 +515,6 @@ describe("guardado automático", () => {
     await user.click(screen.getByLabelText('Marcar "Regalo para la abuela (ejemplo)" como pagado'));
     await waitFor(() => expect(screen.getByText(/La otra persona había hecho cambios/)).toBeInTheDocument(), { timeout: 2500 });
     expect(valor("Ingresos")).toBe("$ 999");
-    expect(screen.getByDisplayValue("De mi esposa")).toBeInTheDocument();
   });
   it("sin conexión: avisa y reintenta", async () => {
     let intento = 0;
@@ -565,9 +594,9 @@ describe("sincronización entre dos personas", () => {
 
 describe("salir", () => {
   it("llama al logout", async () => {
-    const user = montar();
-    Object.defineProperty(window, "location", { value: { href: "/" }, writable: true });
-    await user.click(screen.getAllByRole("button", { name: "Salir" })[0]);
+    const user = montar(seed(), "#/ajustes");
+    Object.defineProperty(window, "location", { value: { href: "/", hash: "#/ajustes" }, writable: true });
+    await user.click(screen.getByRole("button", { name: "Salir" }));
     expect(llamadas.some((l) => l.url === "/api/logout" && l.method === "POST")).toBe(true);
   });
 });

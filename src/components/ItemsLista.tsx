@@ -24,26 +24,28 @@ export default function ItemsLista({
   return (
     <div className={deshabilitada ? "pointer-events-none opacity-40" : ""}>
       {items.length === 0 && (
-        <p className="py-2 text-sm text-slate-400">
-          {etiquetaAgregar === "ítem" ? "Todavía no hay ítems. ¡Agregá el primero!" : `Todavía no hay nadie en la lista. ¡Agregá la primera ${etiquetaAgregar}!`}
+        <p className="py-3 text-sm text-muted">
+          {etiquetaAgregar === "ítem"
+            ? "Todavía no hay ítems. ¡Agregá el primero!"
+            : `Todavía no hay nadie en la lista. ¡Agregá la primera ${etiquetaAgregar}!`}
         </p>
       )}
-      <ul className="divide-y divide-slate-100">
+      <ul>
         {items.map((it, idx) => (
-          <li key={it.id} className="flex items-center gap-1 py-1">
+          <li key={it.id} className="flex items-center gap-2 border-b border-line py-1.5 last:border-b-0">
             <input
               type="checkbox"
+              className="check"
               checked={it.pagado}
               aria-label={`Marcar "${it.nombre}" como pagado`}
               onChange={(e) => mutar((l) => (l[idx].pagado = e.target.checked))}
-              className="h-6 w-6 shrink-0 accent-emerald-600"
             />
             <TextoInput
               valor={it.nombre}
               placeholder="Nombre del ítem"
               autoFocus={it.id === nuevo}
               onChange={(s) => mutar((l) => (l[idx].nombre = s))}
-              className={`min-w-0 flex-1 ${it.pagado ? "text-slate-400 line-through" : ""}`}
+              className={`min-w-0 flex-1 ${it.pagado ? "text-muted line-through" : ""}`}
             />
             <MontoInput
               valor={montoItem(it, { montoBase })}
@@ -53,31 +55,29 @@ export default function ItemsLista({
                   if (montoBase !== undefined) l[idx].manual = true;
                 })
               }
-              className="w-24 shrink-0"
+              className="w-28 shrink-0"
               etiqueta={`Monto de ${it.nombre}`}
             />
             {montoBase !== undefined && it.manual && (
               <BotonIcono
                 titulo="Volver al presupuesto general"
+                icono="deshacer"
                 onClick={() => mutar((l) => (l[idx].manual = false))}
-              >
-                ↺
-              </BotonIcono>
+              />
             )}
             <BotonIcono
               titulo="Eliminar ítem"
+              icono="basura"
               peligro
               disabled={it.fijo}
               onClick={() => {
                 if (confirmar(`¿Eliminar "${it.nombre || "este ítem"}"?`)) mutar((l) => l.splice(idx, 1));
               }}
-            >
-              ✕
-            </BotonIcono>
+            />
           </li>
         ))}
       </ul>
-      <div className="mt-2">
+      <div className="mt-3">
         <BotonAgregar
           onClick={() => {
             const id = nuevoId();

@@ -25,9 +25,11 @@ npm run test:watch
 
 Cubren los cálculos (totales, pagado/pendiente, balance, redondeo, escenarios de vacaciones y "nos quedamos en casa"), la validación del documento, el control de versiones entre dos personas, la autenticación, la API y la interfaz (marcar pagado, editar montos, comparador de destinos, borrar ejemplos, guardado automático y conflictos).
 
-## Celular y computadora
+## Navegación y diseño
 
-El mismo sitio sirve para ambos: en pantallas grandes el resumen y los ingresos quedan fijos a la izquierda y los gastos a la derecha. También se puede instalar como app (menú del navegador → "Instalar" / "Agregar a pantalla de inicio").
+Cuatro pantallas: **Resumen** (balance y categorías), **Gastos** (categorías y detalle de cada una), **Ingresos** y **Ajustes**. En el celular hay una barra inferior; en la computadora, una barra lateral. Cada pantalla tiene su propio link (`#/gastos/<id>`) y el botón "atrás" del navegador funciona.
+
+Modo oscuro por defecto; en Ajustes se puede elegir Claro o Sistema. Los colores están definidos como variables en `src/app/globals.css`. También se puede instalar como app (menú del navegador → "Instalar" / "Agregar a pantalla de inicio").
 
 ## Desplegarlo en Vercel
 

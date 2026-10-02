@@ -11,6 +11,7 @@ const valor = (label: string) =>
   norm(within(status()).getByText(label, { selector: "dt" }).nextElementSibling!.textContent);
 
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ rev: 1 }), { status: 200 })));
   vi.spyOn(window, "confirm").mockReturnValue(true);
 });
@@ -89,7 +90,7 @@ describe("lista de regalos de Navidad (UI)", () => {
   it("agregar una persona nueva la suma con el presupuesto general", async () => {
     const user = await montar();
     await poner(user, general(), 1000);
-    await user.click(screen.getByRole("button", { name: "+ Agregar persona" }));
+    await user.click(screen.getByRole("button", { name: "Agregar persona" }));
     const nombre = screen.getAllByPlaceholderText("Nombre del ítem").at(-1)!;
     await user.type(nombre, "Tía Rosa");
     expect(monto("Tía Rosa")).toHaveValue(1000);
@@ -112,6 +113,7 @@ describe("lista de regalos de Navidad (UI)", () => {
 
 describe("personas y notas", () => {
   it("los ingresos muestran a Gabriel y Camila (no 'yo' / 'esposa')", () => {
+    window.history.replaceState(null, "", "/#/ingresos");
     render(<Presupuestos inicial={crearSeed()} />);
     expect(screen.getAllByText("Gabriel").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Camila").length).toBeGreaterThan(0);
@@ -119,11 +121,13 @@ describe("personas y notas", () => {
     expect(screen.queryByText("Esposa")).not.toBeInTheDocument();
   });
   it("totales por persona: Gabriel 87.000 y Camila 24.900", () => {
+    window.history.replaceState(null, "", "/#/ingresos");
     render(<Presupuestos inicial={crearSeed()} />);
     expect(norm(screen.getByText("Gabriel", { selector: "div" }).parentElement!.textContent)).toContain("$ 87.000");
     expect(norm(screen.getByText("Camila", { selector: "div" }).parentElement!.textContent)).toContain("$ 24.900");
   });
   it("el cronograma muestra el acumulado final de 111.900", () => {
+    window.history.replaceState(null, "", "/#/ingresos");
     render(<Presupuestos inicial={crearSeed()} />);
     const acumulados = screen.getAllByText(/Acumulado hasta acá/).map((e) => norm(e.textContent));
     expect(acumulados.at(-1)).toContain("$ 111.900");

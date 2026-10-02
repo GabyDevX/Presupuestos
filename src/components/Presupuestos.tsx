@@ -1,13 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { borrarEjemplos as quitarEjemplos, hayEjemplos as tieneEjemplos, mover } from "@/lib/acciones";
-import { nuevoId, totales } from "@/lib/calc";
+import { borrarEjemplos as quitarEjemplos, mover } from "@/lib/acciones";
+import { totales } from "@/lib/calc";
+import { parseRuta, rutaAHash, type Ruta, type Tab } from "@/lib/ruta";
 import type { Destino, Ingreso, Presupuesto, Seccion } from "@/lib/types";
-import Ingresos from "./Ingresos";
-import Resumen from "./Resumen";
-import SeccionCard from "./SeccionCard";
-import { BotonAgregar, confirmar } from "./ui";
+import BalancePill from "./BalancePill";
+import { Icono, type NombreIcono } from "./icons";
+import { confirmar } from "./ui";
+import AjustesView from "./vistas/AjustesView";
+import GastosView from "./vistas/GastosView";
+import IngresosView from "./vistas/IngresosView";
+import ResumenView from "./vistas/ResumenView";
+import SeccionView from "./vistas/SeccionView";
+
+const NAV: { tab: Tab; etiqueta: string; icono: NombreIcono }[] = [
+  { tab: "resumen", etiqueta: "Resumen", icono: "resumen" },
+  { tab: "gastos", etiqueta: "Gastos", icono: "gastos" },
+  { tab: "ingresos", etiqueta: "Ingresos", icono: "ingresos" },
+  { tab: "ajustes", etiqueta: "Ajustes", icono: "ajustes" },
+];
+
+const TITULOS: Record<Tab, string> = {
+  resumen: "Resumen",
+  gastos: "Gastos",
+  ingresos: "Ingresos",
+  ajustes: "Ajustes",
+};
 
 type Estado = "guardado" | "guardando" | "error";
 
@@ -15,6 +34,7 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
   const [p, setP] = useState(inicial);
   const [estado, setEstado] = useState<Estado>("guardado");
   const [aviso, setAviso] = useState("");
+  const [ruta, setRuta] = useState<Ruta>({ tab: "resumen" });
 
   const ref = useRef(p);
   const pendiente = useRef(false);
@@ -128,7 +148,19 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
     };
   }, [guardar]);
 
-  const hayEjemplos = tieneEjemplos(p);
+  // Navegación con historial del navegador: el botón "atrás" y los links directos funcionan.
+  useEffect(() => {
+    setRuta(parseRuta(window.location.hash));
+    const alCambiar = () => setRuta(parseRuta(window.location.hash));
+    window.addEventListener("popstate", alCambiar);
+    return () => window.removeEventListener("popstate", alCambiar);
+  }, []);
+
+  const ir = useCallback((r: Ruta) => {
+    window.history.pushState(null, "", rutaAHash(r));
+    setRuta(r);
+    window.scrollTo(0, 0);
+  }, []);
 
   const borrarEjemplos = () => {
     if (!confirmar("¿Borrar todos los datos de ejemplo? Tus propios datos y la estructura se mantienen.")) return;
@@ -141,97 +173,134 @@ export default function Presupuestos({ inicial }: { inicial: Presupuesto }) {
   };
 
   const balanceBase = totales(p).balanceSinDestinos;
+  const indiceSeccion = ruta.seccionId ? p.secciones.findIndex((s) => s.id === ruta.seccionId) : -1;
+  const seccion = indiceSeccion >= 0 ? p.secciones[indiceSeccion] : undefined;
+  const enDetalle = ruta.tab === "gastos" && !!seccion;
+  const titulo = enDetalle ? seccion!.nombre || "Sin nombre" : TITULOS[ruta.tab];
 
-  const estadoGuardado = (
-    <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-      <span>
-        {estado === "guardando" && "Guardando…"}
-        {estado === "guardado" && "✓ Guardado"}
-        {estado === "error" && <span className="text-rose-600">Sin conexión, reintentando…</span>}
-      </span>
-      <button onClick={salir} className="underline">Salir</button>
-    </div>
+  const indicadorGuardado = (
+    <span className="flex items-center gap-2 text-xs text-muted">
+      <span
+        aria-hidden="true"
+        className={`h-2 w-2 rounded-full ${
+          estado === "guardado" ? "bg-ok" : estado === "guardando" ? "animate-pulse bg-warn" : "bg-bad"
+        }`}
+      />
+      {estado === "guardando" && "Guardando…"}
+      {estado === "guardado" && <span className="sr-only">✓ Guardado</span>}
+      {estado === "error" && <span className="text-bad">Sin conexión, reintentando…</span>}
+    </span>
   );
 
+  const botonNav = (n: (typeof NAV)[number], clase: string) => {
+    const activo = ruta.tab === n.tab;
+    return (
+      <button
+        key={n.tab}
+        onClick={() => ir({ tab: n.tab })}
+        aria-current={activo ? "page" : undefined}
+        className={`${clase} ${activo ? "text-accent" : "text-muted hover:text-fg"}`}
+      >
+        <Icono nombre={n.icono} className="h-[22px] w-[22px]" />
+        <span>{n.etiqueta}</span>
+      </button>
+    );
+  };
+
   return (
-    <main className="mx-auto max-w-2xl px-3 pb-24 lg:max-w-6xl lg:px-6">
-      {/* Celular: el resumen queda fijo arriba mientras se scrollea */}
-      <div className="sticky top-0 z-10 -mx-3 bg-slate-100/95 px-3 pb-2 pt-3 backdrop-blur lg:hidden">
-        <Resumen p={p} />
-        <div className="mt-1">{estadoGuardado}</div>
-      </div>
-
-      <header className="mt-2 lg:mt-6">
-        <h1 className="text-2xl font-extrabold">Presupuesto de fin de año</h1>
-        <p className="text-sm text-slate-500">Navidad, Año Nuevo y enero</p>
-      </header>
-
-      {aviso && (
-        <div className="mt-3 rounded-xl bg-amber-100 p-3 text-sm text-amber-900">{aviso}</div>
-      )}
-
-      {hayEjemplos && (
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-          <span>Hay datos de <b>ejemplo</b> (ficticios) para que pruebes la app.</span>
-          <button
-            onClick={borrarEjemplos}
-            className="shrink-0 rounded-lg bg-amber-600 px-3 py-2 font-semibold text-white"
-          >
-            Borrar ejemplos
-          </button>
+    <div className="min-h-dvh lg:pl-64">
+      {/* Computadora: barra lateral */}
+      <nav
+        aria-label="Principal"
+        className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-line bg-surface p-4 lg:flex"
+      >
+        <p className="px-3 pb-6 pt-2 text-lg font-semibold tracking-tight">Presupuesto</p>
+        <div className="flex flex-col gap-1">
+          {NAV.map((n) =>
+            botonNav(n, "flex min-h-11 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors hover:bg-raised"),
+          )}
         </div>
-      )}
+        <div className="mt-auto px-3 pb-2">{indicadorGuardado}</div>
+      </nav>
 
-      {/* Computadora: resumen e ingresos en una columna fija a la izquierda, gastos a la derecha */}
-      <div className="mt-4 lg:grid lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-        <aside className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
-          <div className="hidden space-y-1 lg:block">
-            <Resumen p={p} />
-            {estadoGuardado}
-          </div>
-          <Ingresos
-            ingresos={p.ingresos}
-            mutar={(fn: (l: Ingreso[]) => void) => cambiar((d) => fn(d.ingresos))}
-          />
-        </aside>
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <header className="sticky top-0 z-10 -mx-4 flex items-center gap-2 bg-canvas px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          {enDetalle && (
+            <button
+              onClick={() => ir({ tab: "gastos" })}
+              aria-label="Volver a Gastos"
+              className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted transition-colors hover:bg-raised hover:text-fg"
+            >
+              <Icono nombre="volver" />
+            </button>
+          )}
+          <h1 className="min-w-0 flex-1 truncate text-xl font-semibold tracking-tight">{titulo}</h1>
+          <span className="lg:hidden">{indicadorGuardado}</span>
+          <BalancePill p={p} />
+        </header>
 
-        <div className="mt-4 space-y-4 lg:mt-0">
-          <h2 className="pt-2 text-lg font-bold lg:pt-0">🧾 Gastos</h2>
-
-          {p.secciones.length === 0 && (
-            <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400 shadow-sm">
-              No hay secciones. Creá la primera con el botón de abajo.
-            </p>
+        <main className="pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-2 lg:pb-16">
+          {aviso && (
+            <div className="mb-5 rounded-2xl bg-warnbg p-4 text-sm text-warn" role="alert">
+              {aviso}
+            </div>
           )}
 
-          {p.secciones.map((s, i) => (
-            <SeccionCard
-              key={s.id}
-              seccion={s}
-              indice={i}
+          {ruta.tab === "resumen" && (
+            <ResumenView
+              p={p}
+              abrirSeccion={(id) => ir({ tab: "gastos", seccionId: id })}
+              verIngresos={() => ir({ tab: "ingresos" })}
+              borrarEjemplos={borrarEjemplos}
+            />
+          )}
+
+          {ruta.tab === "gastos" && !seccion && (
+            <GastosView
+              p={p}
+              abrirSeccion={(id) => ir({ tab: "gastos", seccionId: id })}
+              agregarSeccion={(id) => {
+                cambiar((d) => d.secciones.push({ id, nombre: "Nueva sección", emoji: "📌", items: [], subsecciones: [] }));
+                ir({ tab: "gastos", seccionId: id });
+              }}
+            />
+          )}
+
+          {ruta.tab === "gastos" && seccion && (
+            <SeccionView
+              key={seccion.id}
+              seccion={seccion}
+              indice={indiceSeccion}
               cantidad={p.secciones.length}
               destinos={p.destinos}
               balanceBase={balanceBase}
-              mutarSeccion={(fn: (s: Seccion) => void) => cambiar((d) => fn(d.secciones[i]))}
-              moverSeccion={(dir) => cambiar((d) => mover(d.secciones, i, dir))}
-              eliminarSeccion={() => cambiar((d) => d.secciones.splice(i, 1))}
+              mutarSeccion={(fn: (s: Seccion) => void) => cambiar((d) => fn(d.secciones[indiceSeccion]))}
+              moverSeccion={(dir) => cambiar((d) => mover(d.secciones, indiceSeccion, dir))}
+              eliminarSeccion={() => {
+                cambiar((d) => d.secciones.splice(indiceSeccion, 1));
+                ir({ tab: "gastos" });
+              }}
               mutarDestinos={(fn: (l: Destino[]) => void) => cambiar((d) => fn(d.destinos))}
             />
-          ))}
+          )}
 
-          <div className="flex justify-center">
-            <BotonAgregar
-              onClick={() =>
-                cambiar((d) =>
-                  d.secciones.push({ id: nuevoId(), nombre: "Nueva sección", emoji: "📌", items: [], subsecciones: [] }),
-                )
-              }
-            >
-              Agregar sección
-            </BotonAgregar>
-          </div>
-        </div>
+          {ruta.tab === "ingresos" && (
+            <IngresosView ingresos={p.ingresos} mutar={(fn: (l: Ingreso[]) => void) => cambiar((d) => fn(d.ingresos))} />
+          )}
+
+          {ruta.tab === "ajustes" && <AjustesView salir={salir} />}
+        </main>
       </div>
-    </main>
+
+      {/* Celular: barra inferior */}
+      <nav
+        aria-label="Principal"
+        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        {NAV.map((n) =>
+          botonNav(n, "flex min-h-[3.5rem] flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors"),
+        )}
+      </nav>
+    </div>
   );
 }

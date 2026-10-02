@@ -6,3 +6,6 @@ if (typeof window !== "undefined") {
   const { cleanup } = await import("@testing-library/react");
   afterEach(() => cleanup());
 }
+
+// jsdom no implementa scrollTo.
+if (typeof window !== "undefined") window.scrollTo = () => {};
